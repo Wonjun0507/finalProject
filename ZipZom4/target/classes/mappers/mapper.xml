@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.exam.ZipZom.TestMapper">
+	<!-- 로그인 확인 sql문 -->
+	<select id="loginSelect" parameterType="modelTO.userTO" resultType="modelTO.userTO">
+		select id, seq_u seqU from user where id=#{id} and password=#{password}
+	</select>
+	<!-- 회원가입 시 회원 정보 입력 sql문 -->
+	<insert id="signUpInsert" parameterType="modelTO.userTO">
+		insert into user (
+		name, 
+		id, 
+		password, 
+		email, 
+		address, 
+		tel1, 
+		tel2
+		) 
+		values (
+		#{name}, 
+		#{id}, 
+		#{password}, 
+		#{email}, 
+		#{address}, 
+		#{tel1}, 
+		#{tel2}
+		)
+	</insert>
+	<!-- 아이디 중복 검사 sql문 -->
+	<select id="duIdSelect" parameterType="modelTO.userTO" resultType="modelTO.userTO">
+		select id from user where id=#{id}
+	</select>
+	<!-- 이메일 중복 검사 sql문 -->
+	<select id="duEmailSelect" parameterType="modelTO.userTO" resultType="modelTO.userTO">
+		select email from user where email=#{email}
+	</select>
+	<!-- 아이디 찾기 sql문 -->
+	<select id="findIdSelect" parameterType="modelTO.userTO" resultType="String">
+		select id from user where email=#{email} and name=#{name}
+	</select>
+	<!-- 비밀번호 찾기 sql문 -->
+	<select id="sendNumberSelect" parameterType="modelTO.userTO" resultType="modelTO.userTO">
+		select email from user where email=#{email} and ID=#{id}
+	</select>
+	<!-- 비밀번호 찾기 sql문에 의해 회원이 인증 된 후 인증번호 저장 sql문 -->
+	<insert id="auth_KeyInsert" parameterType="modelTO.auth_passwordTO">
+		insert into auth_password (
+		email,
+		auth_Key, 
+		generate_Date
+		) 
+		values (
+		#{email}, 
+		#{authKey}, 
+		#{generateDate}
+		)
+	</insert>
+	<!-- 이메일로 발송하는 인증번호의 중복검사 sql문 -->
+	<select id="duplicateAuth_KeySelect" parameterType="modelTO.auth_passwordTO" resultType="String">
+		select AUTH_KEY from auth_password where AUTH_KEY=#{authKey}
+	</select>
+	<!-- 인증번호 테이블의 이메일 중복검사 sql문 -->
+	<select id="duplicateEmailSelect" parameterType="modelTO.auth_passwordTO" resultType="String">
+		select email from auth_password where EMAIL=#{email}
+	</select>
+	<!-- 인증번호 테이블의 이메일이 중복되었을 경우 삭제하는 sql문 -->
+	<delete id="duplicateEmailDelete" parameterType="modelTO.auth_passwordTO">
+		delete from auth_password where EMAIL=#{email}
+	</delete>
+	<!-- 생성된지 1시간이 지난 인증번호 삭제 sql문 -->
+	<delete id="auth_KeyDelete" parameterType="modelTO.auth_passwordTO">
+		delete from auth_password where generate_date &lt; date_add(now(), interval -1 hour)
+	</delete>
+	<!-- 인증번호 검사 sql문 -->
+	<select id="authKeySelect" parameterType="modelTO.auth_passwordTO" resultType="String">
+		select email from auth_password where AUTH_KEY=#{authKey}
+	</select>
+	<!--비밀번호 변경 sql문 -->
+	<update id="userPasswordUpdate" parameterType="modelTO.auth_passwordTO">
+		UPDATE user SET password = #{password} WHERE email = #{email};
+	</update>
+	<!-- 고객 상세보기,수정창 -->
+	<select id="customerView" parameterType="modelTO.customerTO" resultType="modelTO.CustomerAllTO">
+		select seq_c seqC,name,tel,b_type bType,type,progress,contract_type contractType,b_year bYear,budget_t1 budgetT1,budget_t2 budgetT2,budget_t3 budgetT3,budget_l budgetL,
+		area2,move_schedule moveSchedule,room,direction,option,floor,elevator,context,security,
+		bed,washing_machine washingMachine,desk,drying_machine dryingMachine,induction,electric_range electricRange,gas_range gasRange,wordrobe,sink,shoe_rack shoeRack,refrigerator,bath_tube bathTube,
+		security_guard securityGuard,videophone,interphone,card_key cardKey,cctv,door_security doorSecurity,window_guard windowGuard,
+		visit_date visitDate
+		from customer c left outer join option_customer oc
+		on c.seq_c = oc.pseq_oc
+		left outer join customer_visit_date cvd
+		on cvd.pseq_cvd = c.seq_c
+		left outer join security_customer sc
+		on sc.pseq_sc = c.seq_c
+		where c.seq_c = #{seqC}
+	</select>
+	<!-- 고객관리 창 -->
+	<select id="customerList" parameterType="modelTO.customerTO" resultType="modelTO.customerTO">
+		select seq_c seqC,name,tel,type,b_type bType,progress,contract_type contractType, (select visit_date from customer_visit_date where pseq_cvd = seq_c limit 1) visitDate
+		 from customer where pseq_c = #{pseqC}
+	</select>
+	<!-- 고객 등록 -->
+	<insert id="customerWrite" parameterType="modelTO.customerTO" useGeneratedKeys="true" keyProperty="seqC">
+	insert into customer values(0,#{pseqC},#{name},#{tel},#{type},#{progress},#{contractType},#{budgetT1},
+	#{budgetT2},#{budgetT3},#{budgetL},#{area2},#{moveSchedule},
+	#{room},#{direction},#{option},#{floor},#{elevator},#{bYear},#{context},#{security},#{bType})
+	<selectKey keyProperty="seqC" resultType="int">
+	select last_insert_id()
+	</selectKey>
+	</insert>
+	<!-- 고객 등록 시 옵션 등록 -->
+	<insert id="optionCustomerWrite" parameterType="modelTO.option_customerTO">
+	insert into option_customer values(0,#{pseqOc},#{bed},#{washingMachine},#{desk},#{dryingMachine},#{induction},#{electricRange},#{gasRange},#{wordrobe},#{sink},#{shoeRack},#{refrigerator},#{bathTube})
+	</insert>
+	<!-- 고객 등록 시 방문 날짜 -->
+	<insert id="customerVisitDate" parameterType="modelTO.customer_visit_dateTO">
+	insert into customer_visit_date values(0,#{pseqCvd},#{visitDate})
+	</insert>
+	<!-- 고객 등록 시 보안 옵션 -->
+	<insert id="securityCustomer" parameterType="modelTO.security_customerTO">
+	insert into security_customer values(0,#{pseqSc},#{securityGuard},#{videophone},#{interphone},#{cardKey},#{cctv},#{doorSecurity},#{windowGuard});
+	</insert>
+	<!-- 고객 삭제 -->
+	<delete id="customerDelete" parameterType="modelTO.customerTO">
+	delete from customer where seq_c = #{seqC}
+	</delete>
+	<!-- 고객 삭제 시 방문날짜 제거 -->
+	<delete id="cvdDelete" parameterType="int">
+	delete from customer_visit_date where pseq_cvd = #{pseq_cvd}
+	</delete>
+	<!-- 고객 삭제 시 옵션 제거 -->
+	<delete id="ocDelete" parameterType="int">
+	delete from option_customer where pseq_oc = #{pseq_oc}
+	</delete>
+	<!-- 고객 삭제 시 보안 옵션 제거 -->
+	<delete id="scDelete" parameterType="int">
+	delete from security_customer where pseq_sc = #{pseqSc}
+	</delete>
+	<!-- 고객 수정 -->
+	<update id="customerUpdate" parameterType="modelTO.customerTO">
+		update from customer set tel = #{tel},type = #{type},progress = #{progress},contract_type = #{contractType},
+		budget_t1 = #{budgetT1},budget_t2 = #{budgetT2},budget_t3=#{budgetT3},budget_l=#{budgetL},budget_m1=#{budgetM1},budget_m2=#{budgetM2},area2=#{area2},
+		move_schedule=#{moveSchedule},room=#{room},direction=#{direction},option=#{option},floor=#{floor},elevator=#{elevator},b_year=#{bYear},context=#{context},security=#{security}
+		where seq_c = #{seqC}
+	</update>
+	<!-- 고객 옵션 수정 -->
+	<update id="ocUpdate" parameterType="modelTO.customerTO">
+		update from option_customer set bed=#{bed},washing_machine=#{washingMachine},desk=#{desk},drying_machine=#{dryingMachine},
+		induction=#{induction},electric_range=#{electricRange},gas_range=#{gasRange},wordrobe=#{wordrobe},sink=#{sink},
+		shoe_rack=#{shoeRack},refrigerator=#{refrigerator},bath_tube=#{bathTube}
+		where pseq_oc = #{seqC}
+	</update>
+	<!-- 고객 보안 수정 -->
+	<update id="scUpdate" parameterType="modelTO.customerTO">
+		update from security_customer set security_guard=#{securityGuard},videophone=#{videophone},interphone=#{interphone},
+		card_key=#{cardKey},cctv=#{cctv},door_security=#{doorSecurity},window_guard=#{windowGuard}
+		where pseq_sc = #{seqC}
+	</update>
+	<insert id="cvdUpdate">
+	insert into customer_visit_date values(0,#{pseqCvd},#{visitDate})
+	</insert>
+	<!-- 매물 상세보기,수정창 -->
+	<select id="pfsView" parameterType="modelTO.userTO" resultType="modelTO.pfsTO">
+		select SEQ_PFS seqPfs,PSEQ_PFS pseqPfs,B_TYPE bType,SI,GU,DONG,BUNJI,H_NUMBER hNumber,CONTRACT_TYPE contractType,
+		BUDGET1,BUDGET2,BUDGET3,M_COST mCost,LOAN,AREA1,AREA2,AREA3,MOVE_SCHEDULE moveSchedule,
+		END_OF_LEASE endOfLease,ROOM,BATHROOM,DIRECTION,HEATING_SYSTEM heatingSystem,NUMBER_OF_HOUSEHOLD numberOfHousehole,
+		PARKING,FLOOR,FLOOR_TOTAL floorTotal,B_YEAR bYear,CONTEXT
+		from property_for_sale
+		where pseq_pfs = (select seq_u from user where id = #{id})
+	</select>
+	<!-- 매물 쓰기 -->
+	<insert id="pfsWrite" parameterType="modelTO.pfsTO" useGeneratedKeys="true" keyProperty="seqPfs">
+		insert into property_for_sale values(0,#{pseqPfs},#{bType},#{si},#{gu},#{dong},#{bunji},#{hNumber},#{contractType},#{budget1},#{budget2},#{budget3},
+		#{mCost},#{loan},#{area1},#{area2},#{area3},#{moveSchedule},
+		#{endOfLease},#{room},#{bathroom},#{direction},#{heatingSystem},#{aircondition},#{option},#{numberOfHousehold},
+		#{parking},#{floor},#{floorTotal},#{elevator},#{bYear},#{context},#{security},#{lessorName},#{lessorTel},#{lesseeName},#{lesseeTel},now())
+		
+	<selectKey keyProperty="seqPfs" resultType="int">
+	select last_insert_id()
+	</selectKey>
+	</insert>
+	<!-- 매물 옵션 쓰기 -->
+	<insert id="pfsOption" parameterType="modelTO.option_customerTO">
+		insert into option_pfs values(0,#{pseqOp},#{bed},#{washingMachine},#{desk},#{dryingMachine},#{induction},#{electricRange},
+		#{gasRange},#{wordrobe},#{sink},#{shoeRack},#{refrigerator},#{bathTube})
+	</insert>
+	<!-- 매물 보안 쓰기 -->
+	<insert id="pfsSecurity" parameterType="modelTO.security_pfsTO">
+		insert into security_pfs values(0,#{pseqSp},#{securityGuard},#{videophone},#{interphone},#{cardKey},#{cctv},#{doorSecurity},#{windowGuard})
+	</insert>
+	<!-- 매물 리스트 -->
+	<select id="pfsList" parameterType="modelTO.pfsTO" resultType="modelTO.pfsTO">
+	select seq_pfs seqPfs,b_type bType,contract_type contractType,si,gu,dong,bunji,h_number hNumber,budget1,budget2,budget3,loan,wdate
+	 from property_for_sale
+	 where pseq_pfs = #{pseqPfs}
+	</select>
+	
+	<!-- 고객 찾기(실거래가) -->
+	<select id="customerSearch" parameterType="modelTO.customerTO" resultType="String">
+		select name, contract_type, budget_t1, budget_t2, budget_t3, type, area2, b_year from customer where name=#{name} and tel=#{tel}
+	</select>
+	
+	<!-- 구 검색(실거래가) -->
+	<select id="findGu" parameterType="modelTO.rtpTO" resultType="String">
+		select gu from real_transaction_price where si=#{si}
+	</select>
+	
+</mapper>
